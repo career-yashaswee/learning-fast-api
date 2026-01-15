@@ -22,26 +22,32 @@ db = {
     }
 }
 
-
-
-
 @app.post("/books")
-def submit_books(weight:int,title:str,statuss:str) -> dict[str,int]:
+# def submit_books(weight:int,title:str,statuss:str) -> dict[str,int]:
 
-    if weight > 25:
-        raise HTTPException(
-            status_code=status.HTTP_406_NOT_ACCEPTABLE
-        )
+#     if weight > 25:
+#         raise HTTPException(
+#             status_code=status.HTTP_406_NOT_ACCEPTABLE
+#         )
     
-    new_id = max(db.keys()) + 1
-    db[new_id] = {
-        "weight" : weight,
-        "title" : title,
-        "status" : statuss
-    }
+#     new_id = max(db.keys()) + 1
+#     db[new_id] = {
+#         "weight" : weight,
+#         "title" : title,
+#         "status" : statuss
+#     }
+#     return {
+#         "id" : new_id
+#     }
+def submit_books(weight: int, data:dict) -> dict[str, Any]:
+    content = data['content']
+    title = data['title']
     return {
-        "id" : new_id
+        "weight": weight,
+        "content" : content,
+        "title" : title
     }
+
 
 @app.get("/books/latest")
 def get_latest_books():
