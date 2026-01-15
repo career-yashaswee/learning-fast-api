@@ -1,16 +1,17 @@
+from enum import Enum
 from typing import Any
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 from scalar_fastapi import get_scalar_api_reference
-
+from .schemas import Book
 app = FastAPI()
 
 
-class Book(BaseModel):
-    title: str
-    weight: float
-    status: str
-    content: str
+
+class ShipmentStatus(str, Enum):
+    placed = "placed",
+    in_transit = "in_transiting",
+
 
 
 db = {
@@ -40,7 +41,7 @@ def submit_books(weight: int, data:Book) -> dict[str, Any]:
     }
 
 @app.put("/books/")
-def update_books(id: int, content: str, weight: str, statuss: str) -> dict[str,Any]:
+def update_books(id: int, content: str, weight: str, statuss: ShipmentStatus) -> dict[str,Any]:
     return {
           "weight": weight,
         "content" : content,
