@@ -35,8 +35,12 @@ def get_shipment():
 def get_latest_books():
     return db[max(db.keys())]
 
-@app.get("/books/{id}")
-def get_books(id:int) -> dict[str,Any]:
+@app.get("/books")
+def get_books(id:int | None = None ) -> dict[str,Any]:
+    
+    if not id:
+        id = max(db.keys())
+    
     if id not in db:
         return {
             "error" : "Not Available"
