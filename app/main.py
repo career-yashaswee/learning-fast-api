@@ -22,14 +22,26 @@ db = {
     }
 }
 
-@app.get("/shipment")
-def get_shipment():
-    return {
-        "content": "wooden table",
-        "status": "in-transit"
+
+
+
+@app.post("/books")
+def submit_books(weight:int,title:str,statuss:str) -> dict[str,int]:
+
+    if weight > 25:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE
+        )
+    
+    new_id = max(db.keys()) + 1
+    db[new_id] = {
+        "weight" : weight,
+        "title" : title,
+        "status" : statuss
     }
-
-
+    return {
+        "id" : new_id
+    }
 
 @app.get("/books/latest")
 def get_latest_books():
