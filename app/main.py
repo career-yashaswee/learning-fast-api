@@ -1,8 +1,17 @@
 from typing import Any
 from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel
 from scalar_fastapi import get_scalar_api_reference
 
 app = FastAPI()
+
+
+class Book(BaseModel):
+    title: str
+    weight: float
+    status: str
+    content: str
+
 
 db = {
     1245: {"weight": 0.5, "title": "Hello Ladies 2", "status": "OUT_OF_STOCK"},
@@ -12,23 +21,23 @@ db = {
 
 
 @app.post("/books")
-def submit_books(weight: int, title: str, statuss: str) -> dict[str, int]:
-    if weight > 25:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE)
+# def submit_books(weight: int, title: str, statuss: str) -> dict[str, int]:
+#     if weight > 25:
+#         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE)
 
-    new_id = max(db.keys()) + 1
-    db[new_id] = {"weight": weight, "title": title, "status": statuss}
-    return {"id": new_id}
+#     new_id = max(db.keys()) + 1
+#     db[new_id] = {"weight": weight, "title": title, "status": statuss}
+#     return {"id": new_id}
 
 
-# def submit_books(weight: int, data:dict) -> dict[str, Any]:
-#     content = data['content']
-#     title = data['title']
-#     return {
-#         "weight": weight,
-#         "content" : content,
-#         "title" : title
-#     }
+def submit_books(weight: int, data:Book) -> dict[str, Any]:
+    content = data.content
+    title = data.title
+    return {
+        "weight": weight,
+        "content" : content,
+        "title" : title
+    }
 
 @app.put("/books/")
 def update_books(id: int, content: str, weight: str, statuss: str) -> dict[str,Any]:
