@@ -1,5 +1,5 @@
 from typing import Any
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from scalar_fastapi import get_scalar_api_reference
 
 app = FastAPI()
@@ -40,11 +40,14 @@ def get_books(id:int | None = None ) -> dict[str,Any]:
     
     if not id:
         id = max(db.keys())
+        return db[id]
     
     if id not in db:
-        return {
-            "error" : "Not Available"
-        }
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="not found"
+        )
+    
     return db[id]
 
 @app.get("/my-docs",include_in_schema=False)
