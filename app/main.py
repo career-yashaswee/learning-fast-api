@@ -1,7 +1,26 @@
+from typing import Any
 from fastapi import FastAPI
 from scalar_fastapi import get_scalar_api_reference
 
 app = FastAPI()
+
+db = {
+    1245 : {
+        "weight" : 0.5,
+        "title" : "Hello Ladies 2",
+        "status" : "OUT_OF_STOCK"
+    },
+     1246 : {
+        "weight" : 0.5,
+        "title" : "Hello Ladies 90",
+        "status" : "OUT_OF_STOCK"
+    },
+     1247 : {
+        "weight" : 0.5,
+        "title" : "Hello Ladies 233",
+        "status" : "OUT_OF_STOCK"
+    }
+}
 
 @app.get("/shipment")
 def get_shipment():
@@ -10,13 +29,19 @@ def get_shipment():
         "status": "in-transit"
     }
 
-@app.get("/books")
-def get_books():
-    return {
-        "isbn": 987,
-        "title": "Hello, Ladies",
-        "status": "IN_STOCK"
-    }
+
+
+@app.get("/books/latest")
+def get_latest_books():
+    return db[max(db.keys())]
+
+@app.get("/books/{id}")
+def get_books(id:int) -> dict[str,Any]:
+    if id not in db:
+        return {
+            "error" : "Not Available"
+        }
+    return db[id]
 
 @app.get("/my-docs",include_in_schema=False)
 def get_scalar_docs():
