@@ -15,9 +15,9 @@ class ShipmentStatus(str, Enum):
 
 
 db = {
-    1245: {"weight": 0.5, "title": "Hello Ladies 2", "status": "OUT_OF_STOCK", "content" : "HEY"},
-    1246: {"weight": 0.5, "title": "Hello Ladies 90", "status": "OUT_OF_STOCK", "content" : "HEY"},
-    1247: {"weight": 0.5, "title": "Hello Ladies 233", "status": "OUT_OF_STOCK", "content" : "HEY"},
+    1245: {"weight": 0.5, "title": "Hello Ladies 2", "status": "OUT_OF_STOCK"},
+    1246: {"weight": 0.5, "title": "Hello Ladies 90", "status": "OUT_OF_STOCK"},
+    1247: {"weight": 0.5, "title": "Hello Ladies 233", "status": "OUT_OF_STOCK"},
 }
 
 
@@ -55,21 +55,18 @@ def get_latest_books():
     return db[max(db.keys())]
 
 
-@app.get("/books",response_model=Book)
-def get_books(id: int | None = None) :
+@app.get("/books")
+def get_books(id: int | None = None) -> Book:
     if not id:
         id = max(db.keys())
-        return Book(
-            **db[id]
-        )
+        return db[id]
 
     if id not in db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
 
     book_record = db[id]
-    return Book(
-        **book_record
-    )
+    book_record.pop() 
+    return db[id]
 
 
 @app.put("/books")

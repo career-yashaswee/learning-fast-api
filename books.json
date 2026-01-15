@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1245",
+    "weight": 0.5,
+    "title": "Hello Ladies 2",
+    "status": "OUT_OF_STOCK"
+  },
+  {
+    "id": "1246",
+    "weight": 0.5,
+    "title": "Hello Ladies 90",
+    "status": "OUT_OF_STOCK"
+  },
+  {
+    "id": 1247,
+    "weight": 0.5,
+    "title": "Hello Ladies 233",
+    "status": "OUT_OF_STOCK"
+  }
+]
