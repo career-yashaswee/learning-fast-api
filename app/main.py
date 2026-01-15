@@ -68,6 +68,13 @@ def get_books(id:int | None = None ) -> dict[str,Any]:
     
     return db[id]
 
+
+@app.get("/books/field/{field}")
+def get_books_by_field(field: str, id:int):
+    return db[id][field]
+
+
+
 @app.get("/my-docs",include_in_schema=False)
 def get_scalar_docs():
     return get_scalar_api_reference(
