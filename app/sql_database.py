@@ -1,4 +1,5 @@
 import sqlite3
+import stat
 
 connection = sqlite3.connect("sqlite.db")
 cursor = connection.cursor()
@@ -10,6 +11,15 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS book (id INTEGER PRIMARY KEY, conte
 # cursor.execute("""DELETE FROM book WHERE id = 12701 OR id = 12702""")
 # cursor.execute("""DROP TABLE book""")
 # UPDATE A RECORD IN THE TABLE
-cursor.execute("""UPDATE book SET status = 'in_placed'""")
+# cursor.execute("""UPDATE book SET status = 'in_placed'""")
+id = 12701
+status='placed'
+cursor.execute("""UPDATE book SET status = :status WHERE id = :id""",
+{
+    "status" : status,
+    "id" : id,
+}
+)
+connection.commit()
 connection.commit()
 connection.close()
