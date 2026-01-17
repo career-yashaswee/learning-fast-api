@@ -1,99 +1,93 @@
-from enum import Enum
-from typing import Any
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
+
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel
 from scalar_fastapi import get_scalar_api_reference
-from .schemas import Book
-app = FastAPI()
+
+from app.database.models import Shipment, ShipmentStatus
+from app.database.session import SessionDep, create_db_tables
+
+from .schemas import ShipmentCreate, ShipmentRead, ShipmentUpdate
 
 
+@asynccontextmanager
+async def lifespan_handler(app: FastAPI):
+    create_db_tables()
+    yield
 
-class ShipmentStatus(str, Enum):
-    placed = "placed",
-    in_transit = "in_transiting",
-
-
-
-db = {
-    1245: {"weight": 0.5, "title": "Hello Ladies 2", "status": "OUT_OF_STOCK"},
-    1246: {"weight": 0.5, "title": "Hello Ladies 90", "status": "OUT_OF_STOCK"},
-    1247: {"weight": 0.5, "title": "Hello Ladies 233", "status": "OUT_OF_STOCK"},
-}
+# FastAPI App
+app = FastAPI(
+    # Server start/stop listener
+    lifespan=lifespan_handler,
+)
 
 
-@app.post("/books")
-# def submit_books(weight: int, title: str, statuss: str) -> dict[str, int]:
-#     if weight > 25:
-#         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE)
+### Read a shipment by id
+@app.get("/shipment", response_model=ShipmentRead)
+def get_shipment(id: int, session: SessionDep):
+    # Check for shipment with given id
+    shipment = session.get(Shipment, id)
 
-#     new_id = max(db.keys()) + 1
-#     db[new_id] = {"weight": weight, "title": title, "status": statuss}
-#     return {"id": new_id}
+    if shipment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Given id doesn't exist!",
+        )
 
-
-def submit_books(weight: int, data:Book) -> dict[str, Any]:
-    content = data.content
-    title = data.title
-    return {
-        "weight": weight,
-        "content" : content,
-        "title" : title
-    }
-
-@app.put("/books/")
-def update_books(id: int, content: str, weight: str, statuss: ShipmentStatus) -> dict[str,Any]:
-    return {
-          "weight": weight,
-        "content" : content,
-        "statuss" : statuss,
-    }
+    return shipment
 
 
+### Create a new shipment with content and weight
+@app.post("/shipment", response_model=None)
+def submit_shipment(shipment: ShipmentCreate, session: SessionDep) -> dict[str, int]:
+    new_shipment = Shipment(
+        **shipment.model_dump(),
+        status=ShipmentStatus.placed,
+        estimated_delivery=datetime.now() + timedelta(days=3),
+    )
+    session.add(new_shipment)
+    session.commit()
+    session.refresh(new_shipment)
 
-@app.get("/books/latest")
-def get_latest_books():
-    return db[max(db.keys())]
-
-
-@app.get("/books")
-def get_books(id: int | None = None) -> Book:
-    if not id:
-        id = max(db.keys())
-        return db[id]
-
-    if id not in db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
-
-    book_record = db[id]
-    book_record.pop() 
-    return db[id]
+    return {"id": new_shipment.id}
 
 
-@app.put("/books")
-def shipment_update(id: int, content: str, weight: int, statuss: str):
-    db[id] = {}
+### Update fields of a shipment
+@app.patch("/shipment", response_model=ShipmentRead)
+def update_shipment(id: int, shipment_update: ShipmentUpdate, session: SessionDep):
+    # Update data with given fields
+    update = shipment_update.model_dump(exclude_none=True)
+
+    if not update:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No data provided to update",
+        )
+
+    shipment = session.get(Shipment, id)
+    shipment.sqlmodel_update(update)
+
+    session.add(shipment)
+    session.commit()
+    session.refresh(shipment)
+
+    return shipment
 
 
-# @app.patch("/books")
-# def patch_books(id:int, data:dict[str,Any]):
-#     record = db[id]
-#     record.update(data)
-#     db[id] = record
-#     return record
+### Delete a shipment by id
+@app.delete("/shipment")
+def delete_shipment(id: int, session: SessionDep) -> dict[str, str]:
+    # Remove from database
+    session.delete(session.get(Shipment, id))
+    session.commit()
+
+    return {"detail": f"Shipment with id #{id} is deleted!"}
 
 
-@app.delete("/books")
-def delete_books(id:int) -> dict[str,Any]:
-    db.pop(id)
-    return {
-        "details" : "The Object is Deleted"
-    }
-
-@app.get("/books/field/{field}")
-def get_books_by_field(field: str, id: int):
-    return db[id][field]
-
-
-@app.get("/my-docs", include_in_schema=False)
+### Scalar API Documentation
+@app.get("/scalar", include_in_schema=False)
 def get_scalar_docs():
-    return get_scalar_api_reference(openapi_url=app.openapi_url, title="My Docs")
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title="Scalar API",
+    )

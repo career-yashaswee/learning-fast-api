@@ -1,14 +1,29 @@
-from sqlalchemy import create_engine
-from sqlmodel import SQLModel
-from .models import Shipment
+from typing import Annotated
 
-create_engine(
+from fastapi import Depends
+from sqlalchemy import create_engine
+from sqlmodel import Session, SQLModel
+
+# Create a database engine to connect with database
+engine = create_engine(
+    # database type/dialect and file name
     url="sqlite:///sqlite.db",
+    # Log sql queries
     echo=True,
-    connect_args={
-        "check_same_thread":False
-    }
+    connect_args={"check_same_thread": False},
 )
 
 
-SQLModel.metadata.create_all(bind=engine)
+def create_db_tables():
+    from .models import Shipment  # noqa: F401
+    SQLModel.metadata.create_all(bind=engine)
+
+
+# Session to interact with database
+def get_session():
+    with Session(bind=engine) as session:
+        yield session
+
+
+# Session Dependency Annotation
+SessionDep = Annotated[Session, Depends(get_session)]
