@@ -1,11 +1,36 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, status
+
+from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.templating import Jinja2Templates
+
+from app.utils import TEMPLATE_DIR
 
 from ..dependencies import DeliveryPartnerDep, SellerDep, ShipmentServiceDep
 from ..schemas.shipment import ShipmentCreate, ShipmentRead, ShipmentUpdate
 
-
 router = APIRouter(prefix="/shipment", tags=["Shipment"])
+
+
+templates = Jinja2Templates(TEMPLATE_DIR)
+
+
+### Tracking details of shipment
+@router.get("/track")
+async def get_tracking(request: Request, id: UUID, service: ShipmentServiceDep):
+    # Check for shipment with given id
+    shipment = await service.get(id)
+
+    context = shipment.model_dump()
+    context["status"] = shipment.status
+    context["partner"] = shipment.delivery_partner.name
+    context["timeline"] = shipment.timeline
+    context["timeline"].reverse()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="track.html",
+        context=context,
+    )
 
 
 ### Read a shipment by id
@@ -49,26 +74,15 @@ async def update_shipment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No data provided to update",
         )
-    
-    # Validate logged in parter with assigned partner
-    # on the shipment with given id
-    shipment = await service.get(id)
 
-    if shipment.delivery_partner_id != partner.id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authorized",
-        )
-
-    return await service.update(
-        shipment.sqlmodel_update(shipment_update),
-    )
+    return await service.update(id, shipment_update, partner)
 
 
-### Delete a shipment by id
-@router.delete("/")
-async def delete_shipment(id: UUID, service: ShipmentServiceDep) -> dict[str, str]:
-    # Remove from database
-    await service.delete(id)
-
-    return {"detail": f"Shipment with id #{id} is deleted!"}
+### Cancel a shipment by id
+@router.get("/cancel", response_model=ShipmentRead)
+async def cancel_shipment(
+    id: UUID,
+    seller: SellerDep,
+    service: ShipmentServiceDep,
+):
+    return await service.cancel(id, seller)
