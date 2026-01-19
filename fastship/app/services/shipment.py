@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.shipment import ShipmentCreate, ShipmentUpdate
 from app.database.models import DeliveryPartner, Seller, Shipment, ShipmentStatus
+from app.database.redis import get_shipment_verification_code
 from app.services.shipment_event import ShipmentEventService
 
 from .base import BaseService
@@ -71,9 +72,21 @@ class ShipmentService(BaseService):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not authorized",
             )
-        
-        update = shipment_update.model_dump(exclude_none=True)
-        
+
+        if shipment_update.status == ShipmentStatus.delivered:
+            code = await get_shipment_verification_code(shipment.id)
+
+            if code != shipment_update.verification_code:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Client not authorized",
+                )
+
+        update = shipment_update.model_dump(
+            exclude_none=True,
+            exclude=["verification_code"],
+        )
+
         if shipment_update.estimated_delivery:
             shipment.estimated_delivery = shipment_update.estimated_delivery
 
@@ -94,7 +107,7 @@ class ShipmentService(BaseService):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not Authorized",
             )
-        
+
         event = await self.event_service.add(
             shipment=shipment,
             status=ShipmentStatus.cancelled,
@@ -102,7 +115,6 @@ class ShipmentService(BaseService):
 
         shipment.timeline.append(event)
         return shipment
-
 
     # Delete a shipment
     async def delete(self, id: UUID) -> None:
